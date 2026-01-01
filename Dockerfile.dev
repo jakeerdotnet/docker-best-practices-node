@@ -1,0 +1,15 @@
+# Development Dockerfile - Single stage for faster builds during development
+FROM node:18.17.1-alpine
+
+WORKDIR /app
+
+# Install nodemon and dev dependencies
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+EXPOSE 3000
+
+# Run with nodemon for hot reload
+CMD ["npm", "run", "dev"]

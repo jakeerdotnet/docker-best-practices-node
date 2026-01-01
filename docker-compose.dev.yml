@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  app:
+    # Development build with Dockerfile.dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    
+    container_name: docker-best-practices-app-dev
+    
+    # Mount source code for hot reload
+    volumes:
+      - .:/app
+      - /app/node_modules  # Prevent host node_modules from overriding container
+    
+    env_file:
+      - .env
+    
+    ports:
+      - "3000:3000"
+    
+    # No resource limits in development for flexibility
+    restart: unless-stopped
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  db:
+    image: postgres:15.4-alpine
+    container_name: docker-best-practices-db-dev
+    
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: appdb
+    
+    ports:
+      - "5432:5432"
+    
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    restart: unless-stopped
+
+volumes:
+  postgres_data_dev:
+    driver: local

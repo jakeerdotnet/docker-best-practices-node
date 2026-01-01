@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  app:
+    # Build from production Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    # Container name for easier reference
+    container_name: docker-best-practices-app
+    
+    # Environment variables (Mistake #3: Hardcoding Configuration)
+    env_file:
+      - .env
+    
+    # Port mapping
+    ports:
+      - "3000:3000"
+    
+    # Resource limits (Mistake #15: Resource Limits)
+    # Set hard limits for memory and CPU
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check (Mistake #6: Health Checks)
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Logging configuration (Mistake #9: Log Management)
+    # Limit log size to prevent disk space issues
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=app"
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Read-only root filesystem for better security
+    read_only: true
+    
+    # Temporary filesystem for writable dirs
+    tmpfs:
+      - /tmp
+      - /run
+
+  # Optional: PostgreSQL database service demonstrating network segmentation
+  db:
+    image: postgres:15.4-alpine
+    container_name: docker-best-practices-db
+    
+    # Database credentials (use external secrets in production)
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: appdb
+    
+    # Don't expose DB port externally - only app can access
+    expose:
+      - "5432"
+    
+    # Volumes for persistence
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    
+    # Health check for database
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    
+    restart: unless-stopped
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Custom networks for segmentation (Mistake #12: Network Security)
+networks:
+  # Frontend network - accessible from outside
+  frontend:
+    driver: bridge
+  
+  # Backend network - internal only
+  backend:
+    driver: bridge
+    internal: true
+
+# Named volumes
+volumes:
+  postgres_data:
+    driver: local
