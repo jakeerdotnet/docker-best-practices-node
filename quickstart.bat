@@ -42,6 +42,8 @@ if "%command%"=="dev" (
     call :start_production
 ) else if "%command%"=="test" (
     call :test_endpoints
+) else if "%command%"=="push" (
+    call :push_image
 ) else if "%command%"=="stop" (
     call :stop_containers
 ) else if "%command%"=="logs" (
@@ -103,6 +105,26 @@ echo View logs: docker-compose logs -f app
 echo Stop: docker-compose down
 exit /b 0
 
+:push_image
+echo [*] Pushing image to Docker Hub...
+
+REM Check if image exists, if not build it
+docker image inspect docker-best-practices-app:1.0.0 >nul 2>&1
+if errorlevel 1 call :build_production
+
+if "!DOCKER_USERNAME!"=="" set /p DOCKER_USERNAME="Enter Docker Hub Username: "
+if "!DOCKER_USERNAME!"=="" (
+    echo [ERROR] Docker Hub username is required to push.
+    exit /b 1
+)
+
+echo [*] Tagging and pushing to !DOCKER_USERNAME!/docker-best-practices-app...
+docker tag docker-best-practices-app:1.0.0 !DOCKER_USERNAME!/docker-best-practices-app:1.0.0
+docker tag docker-best-practices-app:1.0.0 !DOCKER_USERNAME!/docker-best-practices-app:latest
+docker push !DOCKER_USERNAME!/docker-best-practices-app:1.0.0
+docker push !DOCKER_USERNAME!/docker-best-practices-app:latest
+exit /b 0
+
 :test_endpoints
 echo [*] Testing endpoints...
 echo.
@@ -152,6 +174,7 @@ echo   dev              - Start development environment
 echo   build            - Build production image
 echo   start            - Start production environment
 echo   test             - Test API endpoints
+echo   push             - Push image to Docker Hub
 echo   stop             - Stop running containers
 echo   logs             - View Docker Compose logs
 echo   stats            - Show container resource usage
@@ -163,5 +186,6 @@ echo   quickstart.bat dev              # Start development
 echo   quickstart.bat build            # Build production image
 echo   quickstart.bat start            # Start production container
 echo   quickstart.bat test             # Test endpoints
+echo   quickstart.bat push             # Push to registry
 echo.
 exit /b 0

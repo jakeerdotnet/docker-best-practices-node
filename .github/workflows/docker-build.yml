@@ -9,6 +9,8 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: docker-best-practices-app
     
     steps:
     - uses: actions/checkout@v3
@@ -26,12 +28,12 @@ jobs:
       run: npm test
     
     - name: Build Docker image
-      run: docker build -t docker-best-practices-app:${{ github.sha }} .
+      run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} .
     
     - name: Run Trivy vulnerability scan
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: docker-best-practices-app:${{ github.sha }}
+        image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
         format: 'sarif'
         output: 'trivy-results.sarif'
         severity: 'CRITICAL,HIGH'
@@ -48,7 +50,7 @@ jobs:
     
     - name: Test Docker image
       run: |
-        docker run -d --name test-app -p 3000:3000 docker-best-practices-app:${{ github.sha }}
+        docker run -d --name test-app -p 3000:3000 ${{ env.IMAGE_NAME }}:${{ github.sha }}
         sleep 5
         curl -f http://localhost:3000/health || exit 1
         docker stop test-app
@@ -63,7 +65,7 @@ jobs:
     - name: Push image to Docker Hub
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        docker tag docker-best-practices-app:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/docker-best-practices-app:latest
-        docker tag docker-best-practices-app:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/docker-best-practices-app:${{ github.sha }}
-        docker push ${{ secrets.DOCKER_USERNAME }}/docker-best-practices-app:latest
-        docker push ${{ secrets.DOCKER_USERNAME }}/docker-best-practices-app:${{ github.sha }}
+        docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+        docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
