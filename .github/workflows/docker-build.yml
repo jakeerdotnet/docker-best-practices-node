@@ -24,7 +24,7 @@ jobs:
       run: npm install
     
     - name: Run tests
-      run: npm test
+      run: npm test -- --forceExit --detectOpenHandles
     
     - name: Build Docker image
       run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} .
